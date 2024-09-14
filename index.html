@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Space Shooter Adventure</title>
+<style>
+    body { margin: 0; overflow: hidden; background: black; }
+    #gameCanvas { display: block; margin: 0 auto; background: #000; }
+    #score, #lives {
+        position: absolute;
+        top: 10px;
+        color: #fff;
+        font-size: 24px;
+        font-family: Arial, sans-serif;
+    }
+    #score { left: 10px; }
+    #lives { right: 10px; }
+</style>
+</head>
+<body>
+<canvas id="gameCanvas"></canvas>
+<div id="score">Score: 0</div>
+<div id="lives">Lives: 3</div>
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const scoreElement = document.getElementById('score');
+const livesElement = document.getElementById('lives');
+
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+let ship = {
+    x: canvas.width / 2 - 25,
+    y: canvas.height - 100,
+    width: 50,
+    height: 50,
+    speed: 10
+};
+
+let enemies = [];
+let bullets = [];
+let score = 0;
+let lives = 3;
+let keys = {};
+
+function createEnemy() {
+    let enemySize = 40;
+    let enemy = {
+        x: Math.random() * (canvas.width - enemySize),
+        y: -enemySize,
+        width: enemySize,
+        height: enemySize,
+        speed: 2 + Math.random() * 3
+    };
+    enemies.push(enemy);
+}
+
+function update() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Move ship
+    if (keys['ArrowLeft'] && ship.x > 0) ship.x -= ship.speed;
+    if (keys['ArrowRight'] && ship.x < canvas.width - ship.width) ship.x += ship.speed;
+
+    // Draw ship
+    ctx.fillStyle = 'cyan';
+    ctx.fillRect(ship.x, ship.y, ship.width, ship.height);
+
+    // Move and draw bullets
+    for (let i = 0; i < bullets.length; i++) {
+        let bullet = bullets[i];
+        bullet.y -= bullet.speed;
+        ctx.fillStyle = 'red';
+        ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
+
+        // Bullet collision with enemies
+        for (let j = 0; j < enemies.length; j++) {
+            let enemy = enemies[j];
+            if (
+                bullet.x < enemy.x + enemy.width &&
+                bullet.x + bullet.width > enemy.x &&
+                bullet.y < enemy.y + enemy.height &&
+                bullet.y + bullet.height > enemy.y
+            ) {
+                enemies.splice(j, 1);
+                bullets.splice(i, 1);
+                score += 10;
+                scoreElement.innerText = 'Score: ' + score;
+                i--;
+                break;
+            }
+        }
+
+        // Remove bullets that go off-screen
+        if (bullet.y < 0) {
+            bullets.splice(i, 1);
+            i--;
+        }
+    }
+
+    // Move and draw enemies
+    for (let i = 0; i < enemies.length; i++) {
+        let enemy = enemies[i];
+        enemy.y += enemy.speed;
+        ctx.fillStyle = 'orange';
+        ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
+
+        // Enemy collision with ship
+        if (
+            enemy.x < ship.x + ship.width &&
+            enemy.x + enemy.width > ship.x &&
+            enemy.y < ship.y + ship.height &&
+            enemy.y + enemy.height > ship.y
+        ) {
+            enemies.splice(i, 1);
+            lives--;
+            livesElement.innerText = 'Lives: ' + lives;
+            i--;
+            continue;
+        }
+
+        // Remove enemies that go off-screen
+        if (enemy.y > canvas.height) {
+            enemies.splice(i, 1);
+            i--;
+        }
+    }
+
+    // Game over condition
+    if (lives <= 0) {
+        alert('Game Over! Your score: ' + score);
+        document.location.reload();
+    }
+
+    requestAnimationFrame(update);
+}
+
+document.addEventListener('keydown', function(e) {
+    keys[e.key] = true;
+    // Fire bullet
+    if ((e.key === ' ' || e.key === 'Spacebar') && bullets.length < 5) {
+        bullets.push({
+            x: ship.x + ship.width / 2 - 2.5,
+            y: ship.y,
+            width: 5,
+            height: 10,
+            speed: 15
+        });
+    }
+});
+
+document.addEventListener('keyup', function(e) {
+    keys[e.key] = false;
+});
+
+// Spawn enemies at intervals
+setInterval(createEnemy, 800);
+
+// Increase difficulty over time
+setInterval(() => {
+    createEnemy();
+}, 5000);
+
+update();
+</script>
+</body>
+</html>
